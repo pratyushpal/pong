@@ -57,7 +57,7 @@ class PongPaddle(Widget):
         self.handle_input(touch.x, touch.y)
 
 class AutoPaddle(PongPaddle):
-
+    speed = NumericProperty(12)
     def bounce_ball(self, ball):
         if self.collide_widget(ball):
             ball.towards_bot = 0
@@ -74,6 +74,7 @@ class AutoPaddle(PongPaddle):
         if self.target_pos == -1 or self.speed == 0:
             return
         if ball.towards_bot == 1 and ball.center_x > self.center_y:
+            self.speed = ball.velocity_x
             #move towards the ball
             self.velocity = (self.target_pos - self.center_y)  / abs(self.target_pos - self.center_y) * self.speed
             self.pos = Vector(0, self.velocity) + self.pos
@@ -94,17 +95,19 @@ class PongGame(Widget):
     player2 = ObjectProperty(None)
 
     #serving the ball
-    def serve_ball(self, vel=(6,0)):
+    def serve_ball(self, direc, vel=(6,0)):
         self.ball.center = self.center
         self.ball.velocity = vel
+        self.ball.towards_bot = direc
     #updating the state
     def update(self, *args):
         self.ball.update()
         self.player1.update(self.ball)
         #the bot paddle will move once the ball has crossed the middle
-        if self.ball.center_x  > self.player2.center_y:
-            self.player2.handle_input(self.ball.center_x, self.ball.center_y)
-        self.player2.update(self.ball)
+        if self.ball.center_x  > self.width/4:
+            if self.ball.center_y - self.ball.height/2 > self.player2.center_y + self.player2.height/2 or self.ball.center_y + self.ball.height/2 < self.player2.center_y - self.player2.height/2:
+                self.player2.handle_input(self.ball.center_x, self.ball.center_y)
+                self.player2.update(self.ball)
         #bounce off paddles
         self.player1.bounce_ball(self.ball)
         self.player2.bounce_ball(self.ball)
@@ -119,13 +122,13 @@ class PongGame(Widget):
             if(self.player2.score == 10):
                 self.player2.score = 0
                 self.player1.score = 0
-            self.serve_ball(vel=(6,0))
+            self.serve_ball(1, vel=(6,0))
         if self.ball.x > self.width:
             self.player1.score += 1
             if(self.player1.score == 10):
                 self.player2.score = 0
                 self.player1.score = 0
-            self.serve_ball(vel=(-6,0))
+            self.serve_ball(0, vel=(-6,0))
 
     # responding to touch
     def on_touch_move(self, touch):
@@ -148,7 +151,7 @@ Factory.register("PongGame", PongGame)
 class PongApp(App):
     def build(self):
         game = PongGame()
-        game.serve_ball()
+        game.serve_ball(0)
         Clock.schedule_interval(game.update, 1.0/300.0)
         return game
 
